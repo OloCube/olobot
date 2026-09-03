@@ -19,7 +19,6 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 DATA_FILE = "olo_channels.json"
-# Dictionary to keep track of the last user who sent a valid "olo" in each channel
 last_olo_users = {}
 
 def load_channels():
@@ -50,7 +49,7 @@ class HistoryPaginator(discord.ui.View):
         if self.page > 1:
             self.page -= 1
             button.disabled = (self.page == 1)
-            self.children[1].disabled = False # Enable Next button
+            self.children[1].disabled = False 
             await interaction.response.edit_message(content=self.pages[self.page], view=self)
 
     @discord.ui.button(label="Next ▶", style=discord.ButtonStyle.primary)
@@ -58,11 +57,16 @@ class HistoryPaginator(discord.ui.View):
         if self.page < 2:
             self.page += 1
             button.disabled = (self.page == 2)
-            self.children[0].disabled = False # Enable Back button
+            self.children[0].disabled = False 
             await interaction.response.edit_message(content=self.pages[self.page], view=self)
 
 @bot.event
 async def on_ready():
+    # SET BOT STATUS HERE
+    # Options: activity=discord.Game(name="olo") -> "Playing olo"
+    #          activity=discord.Activity(type=discord.ActivityType.watching, name="#olo") -> "Watching #olo"
+    await bot.change_presence(activity=discord.Game(name="olo"))
+
     try:
         synced = await bot.tree.sync()
         print(f"Synced {len(synced)} slash commands!")
@@ -109,7 +113,7 @@ async def channel_error(interaction: discord.Interaction, error: app_commands.Ap
     if isinstance(error, app_commands.MissingPermissions):
         await interaction.response.send_message("❌ You need 'Manage Channels' permissions to use this command!", ephemeral=True)
 
-# MESSAGE MONITORING LOGIC (WITH TWICE-IN-A-ROW CHECK)
+# MESSAGE MONITORING LOGIC
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
@@ -120,20 +124,15 @@ async def on_message(message):
     if message.channel.id in olo_channels:
         words = message.content.strip().lower().split()
 
-        # 1. Check if the message is a valid "olo"
-        if len(words) > 0 and words[0] == "olo":
-            
-            # 2. Check if this specific user was the LAST person to olo here
+        if len(words) > 0 and words == "olo":
             channel_id = message.channel.id
             if channel_id in last_olo_users and last_olo_users[channel_id] == message.author.id:
-                # Same person tried to olo twice in a row -> Delete it!
                 try:
                     await message.delete()
                 except (discord.Forbidden, discord.NotFound):
                     pass
                 return
 
-            # If it's a new person, allow it and update who the last person is
             last_olo_users[channel_id] = message.author.id
 
             reaction = "✅"
@@ -146,7 +145,6 @@ async def on_message(message):
             except discord.DiscordException:
                 pass
         else:
-            # Not an olo message -> Delete it!
             try:
                 await message.delete()
             except (discord.Forbidden, discord.NotFound):
