@@ -33,6 +33,32 @@ def save_channels(channels):
     with open(DATA_FILE, "w") as f:
         json.dump(channels, f)
 
+# INTERACTIVE BUTTONS FOR THE LORE
+class HistoryPaginator(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=60) # Buttons stop working after 60 seconds of inactivity
+        self.page = 1
+        self.pages = {
+            1: "📜 **The Olo History (Page 1/2)**\n\nOlo was created when Kribit sent a meme and said 'ppougj try not to say lol challenge(impossible)', to which ppougj replied 'olo'",
+            2: "📜 **The Olo History (Page 2/2)**\n\nolo the second was a small boy, he didnt know anything about the world but he knew he was a direct descendant of olo the first, he saw that the world did not want to be associated with the olo name, and therefore building hatred against mankind, in order to build a better olo from his pride"
+        }
+
+    @discord.ui.button(label="◀ Back", style=discord.ButtonStyle.secondary, disabled=True)
+    async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.page > 1:
+            self.page -= 1
+            button.disabled = (self.page == 1)
+            self.children[1].disabled = False # Enable Next button
+            await interaction.response.edit_message(content=self.pages[self.page], view=self)
+
+    @discord.ui.button(label="Next ▶", style=discord.ButtonStyle.primary)
+    async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.page < 2:
+            self.page += 1
+            button.disabled = (self.page == 2)
+            self.children[0].disabled = False # Enable Back button
+            await interaction.response.edit_message(content=self.pages[self.page], view=self)
+
 @bot.event
 async def on_ready():
     try:
@@ -41,6 +67,13 @@ async def on_ready():
     except Exception as e:
         print(f"Failed to sync commands: {e}")
     print(f"Logged in as {bot.user.name} and monitoring olo channels!")
+
+# NEW COMMAND: OLO HISTORY
+@bot.tree.command(name="olohistory", description="Learn about the epic lore and history of Olo.")
+async def olohistory(interaction: discord.Interaction):
+    view = HistoryPaginator()
+    initial_text = "📜 **The Olo History (Page 1/2)**\n\nOlo was created when Kribit sent a meme and said 'ppougj try not to say lol challenge(impossible)', to which ppougj replied 'olo'"
+    await interaction.response.send_message(initial_text, view=view)
 
 # SLASH COMMAND TO SET THE CHANNEL
 @bot.tree.command(name="setchannel", description="Set a channel for strict olo-only counting.")
@@ -74,7 +107,7 @@ async def channel_error(interaction: discord.Interaction, error: app_commands.Ap
     if isinstance(error, app_commands.MissingPermissions):
         await interaction.response.send_message("❌ You need 'Manage Channels' permissions to use this command!", ephemeral=True)
 
-# MESSAGE MONITORING LOGIC WITH CUSTOM EMOJI CHECK
+# MESSAGE MONITORING LOGIC
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
@@ -85,11 +118,8 @@ async def on_message(message):
     if message.channel.id in olo_channels:
         words = message.content.lower().split()
 
-        if len(words) > 0 and words[0] == "olo":
-            # Default reaction is the checkmark
+        if len(words) > 0 and words == "olo":
             reaction = "✅"
-            
-            # Look for a custom server emoji named exactly "olo"
             custom_emoji = discord.utils.get(message.guild.emojis, name="olo")
             if custom_emoji:
                 reaction = custom_emoji
