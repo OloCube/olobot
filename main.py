@@ -36,7 +36,7 @@ def save_channels(channels):
 # INTERACTIVE BUTTONS FOR THE LORE
 class HistoryPaginator(discord.ui.View):
     def __init__(self):
-        super().__init__(timeout=60) # Buttons stop working after 60 seconds of inactivity
+        super().__init__(timeout=60)
         self.page = 1
         self.pages = {
             1: "📜 **The Olo History (Page 1/2)**\n\nOlo was created when Kribit sent a meme and said 'ppougj try not to say lol challenge(impossible)', to which ppougj replied 'olo'",
@@ -68,7 +68,7 @@ async def on_ready():
         print(f"Failed to sync commands: {e}")
     print(f"Logged in as {bot.user.name} and monitoring olo channels!")
 
-# NEW COMMAND: OLO HISTORY
+# OLO HISTORY
 @bot.tree.command(name="olohistory", description="Learn about the epic lore and history of Olo.")
 async def olohistory(interaction: discord.Interaction):
     view = HistoryPaginator()
@@ -116,9 +116,11 @@ async def on_message(message):
     olo_channels = load_channels()
     
     if message.channel.id in olo_channels:
-        words = message.content.lower().split()
+        # Strip any accidental extra spaces and convert to lowercase
+        words = message.content.strip().lower().split()
 
-        if len(words) > 0 and words == "olo":
+        # Check if the very first word in the message is exactly "olo"
+        if len(words) > 0 and words[0] == "olo":
             reaction = "✅"
             custom_emoji = discord.utils.get(message.guild.emojis, name="olo")
             if custom_emoji:
