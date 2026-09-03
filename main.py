@@ -19,6 +19,8 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 DATA_FILE = "olo_channels.json"
+# Dictionary to keep track of the last user who sent a valid "olo" in each channel
+last_olo_users = {}
 
 def load_channels():
     if os.path.exists(DATA_FILE):
@@ -107,7 +109,7 @@ async def channel_error(interaction: discord.Interaction, error: app_commands.Ap
     if isinstance(error, app_commands.MissingPermissions):
         await interaction.response.send_message("❌ You need 'Manage Channels' permissions to use this command!", ephemeral=True)
 
-# MESSAGE MONITORING LOGIC
+# MESSAGE MONITORING LOGIC (WITH TWICE-IN-A-ROW CHECK)
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
@@ -116,11 +118,24 @@ async def on_message(message):
     olo_channels = load_channels()
     
     if message.channel.id in olo_channels:
-        # Strip any accidental extra spaces and convert to lowercase
         words = message.content.strip().lower().split()
 
-        # Check if the very first word in the message is exactly "olo"
+        # 1. Check if the message is a valid "olo"
         if len(words) > 0 and words[0] == "olo":
+            
+            # 2. Check if this specific user was the LAST person to olo here
+            channel_id = message.channel.id
+            if channel_id in last_olo_users and last_olo_users[channel_id] == message.author.id:
+                # Same person tried to olo twice in a row -> Delete it!
+                try:
+                    await message.delete()
+                except (discord.Forbidden, discord.NotFound):
+                    pass
+                return
+
+            # If it's a new person, allow it and update who the last person is
+            last_olo_users[channel_id] = message.author.id
+
             reaction = "✅"
             custom_emoji = discord.utils.get(message.guild.emojis, name="olo")
             if custom_emoji:
@@ -131,11 +146,10 @@ async def on_message(message):
             except discord.DiscordException:
                 pass
         else:
+            # Not an olo message -> Delete it!
             try:
                 await message.delete()
-            except discord.Forbidden:
-                print(f"Error: Missing permissions to delete messages in {message.channel.name}")
-            except discord.NotFound:
+            except (discord.Forbidden, discord.NotFound):
                 pass
 
     await bot.process_commands(message)
