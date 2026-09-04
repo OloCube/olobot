@@ -52,7 +52,7 @@ class HistoryPaginator(discord.ui.View):
         if self.page > 1:
             self.page -= 1
             button.disabled = (self.page == 1)
-            self.children.disabled = False 
+            self.children[1].disabled = False # Enable Next button
             await interaction.response.edit_message(content=self.pages[self.page], view=self)
 
     @discord.ui.button(label="Next ▶", style=discord.ButtonStyle.primary)
@@ -60,7 +60,7 @@ class HistoryPaginator(discord.ui.View):
         if self.page < 2:
             self.page += 1
             button.disabled = (self.page == 2)
-            self.children.disabled = False 
+            self.children[0].disabled = False # Enable Back button
             await interaction.response.edit_message(content=self.pages[self.page], view=self)
 
 @bot.event
@@ -77,7 +77,8 @@ async def on_ready():
 @bot.tree.command(name="olohistory", description="Learn about the epic lore and history of Olo.")
 async def olohistory(interaction: discord.Interaction):
     view = HistoryPaginator()
-    await interaction.response.send_message(view.pages, view=view)
+    # FIXED LINE: Send only the text for Page 1 instead of the raw dictionary layout
+    await interaction.response.send_message(view.pages[1], view=view)
 
 # SUPPORT COMMAND
 @bot.tree.command(name="support", description="Get troubleshooting steps and support server access.")
