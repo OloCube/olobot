@@ -49,7 +49,7 @@ class HistoryPaginator(discord.ui.View):
         if self.page > 1:
             self.page -= 1
             button.disabled = (self.page == 1)
-            self.children[1].disabled = False # Enable Next button
+            self.children[1].disabled = False 
             await interaction.response.edit_message(content=self.pages[self.page], view=self)
 
     @discord.ui.button(label="Next ▶", style=discord.ButtonStyle.primary)
@@ -57,12 +57,11 @@ class HistoryPaginator(discord.ui.View):
         if self.page < 2:
             self.page += 1
             button.disabled = (self.page == 2)
-            self.children[0].disabled = False # Enable Back button
+            self.children[0].disabled = False 
             await interaction.response.edit_message(content=self.pages[self.page], view=self)
 
 @bot.event
 async def on_ready():
-    # Show "Playing olo" status
     await bot.change_presence(activity=discord.Game(name="olo"))
     try:
         synced = await bot.tree.sync()
@@ -76,6 +75,21 @@ async def on_ready():
 async def olohistory(interaction: discord.Interaction):
     view = HistoryPaginator()
     await interaction.response.send_message(view.pages[1], view=view)
+
+# NEW COMMAND: SUPPORT
+@bot.tree.command(name="support", description="Get troubleshooting steps and support server access.")
+async def support(interaction: discord.Interaction):
+    support_text = (
+        "🛠️ **Oh no, the bot isn't working?**\n"
+        "Here are some simple fixes you can try right now:\n\n"
+        "1️⃣ **Kick the bot and re-add it** to refresh its cache and command registry.\n"
+        "2️⃣ Verify the bot has a role with **Manage Messages** and **Add Reactions** permissions.\n"
+        "3️⃣ Ensure you ran `/setchannel` inside your designated olo channel.\n"
+        "4️⃣ Make sure your custom emoji is named exactly `olo` (lowercase).\n\n"
+        " For further help and support, join the OloBot Support Discord server:\n"
+        "👉 https://discord.gg/X2VTPtVa9b"
+    )
+    await interaction.response.send_message(support_text)
 
 # SLASH COMMAND TO SET THE CHANNEL
 @bot.tree.command(name="setchannel", description="Set a channel for strict olo-only counting.")
@@ -118,14 +132,11 @@ async def on_message(message):
     olo_channels = load_channels()
     
     if message.channel.id in olo_channels:
-        # Turn message into list of lowercase words
         words = message.content.strip().lower().split()
 
-        # FIXED logic: Check if there are words and the very FIRST word is exactly "olo"
         if len(words) > 0 and words[0] == "olo":
             channel_id = message.channel.id
             
-            # Anti-spam: Check if this user was the last one to olo here
             if channel_id in last_olo_users and last_olo_users[channel_id] == message.author.id:
                 try:
                     await message.delete()
@@ -133,10 +144,8 @@ async def on_message(message):
                     pass
                 return
 
-            # Log this user as the last one to speak
             last_olo_users[channel_id] = message.author.id
 
-            # Determine reaction (Custom :olo: or standard ✅)
             reaction = "✅"
             custom_emoji = discord.utils.get(message.guild.emojis, name="olo")
             if custom_emoji:
@@ -147,7 +156,6 @@ async def on_message(message):
             except discord.DiscordException:
                 pass
         else:
-            # First word wasn't "olo" -> Vaporize it!
             try:
                 await message.delete()
             except (discord.Forbidden, discord.NotFound):
