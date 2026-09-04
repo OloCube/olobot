@@ -10,7 +10,12 @@ app = Flask('')
 def home(): return "Olo bot is alive!"
 def keep_alive(): Thread(target=lambda: app.run(host='0.0.0.0', port=8080)).start()
 
-bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
+# SAFE INTENTS SETTING: Only requests what we actually use
+intents = discord.Intents.default()
+intents.message_content = True
+intents.guilds = True
+
+bot = commands.Bot(command_prefix="!", intents=intents)
 olo_channels, last_olo_users = set(), {}
 MY_ID = 989971920441180160  
 TAG = "[YOU MAY ONLY TYPE OLO IN THIS CHANNEL!]"
@@ -30,19 +35,18 @@ class HistoryPaginator(discord.ui.View):
             2: "📜 **The Olo History (Page 2/2)**\n\nolo the second was a small boy, he didnt know anything about the world but he knew he was a direct descendant of olo the first, he saw that the world did not want to be associated with the olo name, and therefore building hatred against mankind, in order to build a better olo from his pride"
         }
 
-    async def update_page(self, interaction: discord.Interaction):
-        # Safely changes button states using explicit list mapping
-        self.children[0].disabled = (self.page == 1)
-        self.children[1].disabled = (self.page == 2)
-        await interaction.response.edit_message(content=self.pages[self.page], view=self)
-
-    @discord.ui.button(label="◀ Back", style=discord.ButtonStyle.secondary, disabled=True)
+    # FIXED: Avoids self.children list manipulation bugs completely
+    @discord.ui.button(label="◀ Back", style=discord.ButtonStyle.secondary)
     async def back(self, interaction: discord.Interaction, btn: discord.ui.Button):
-        if self.page > 1: self.page -= 1; await self.update_page(interaction)
+        if self.page > 1: 
+            self.page -= 1
+            await interaction.response.edit_message(content=self.pages[self.page])
 
     @discord.ui.button(label="Next ▶", style=discord.ButtonStyle.primary)
     async def next(self, interaction: discord.Interaction, btn: discord.ui.Button):
-        if self.page < 2: self.page += 1; await self.update_page(interaction)
+        if self.page < 2: 
+            self.page += 1
+            await interaction.response.edit_message(content=self.pages[self.page])
 
 @bot.event
 async def on_ready():
@@ -57,7 +61,7 @@ async def on_ready():
 
 @bot.tree.command(name="olohistory", description="Learn about the epic lore and history of Olo.")
 async def olohistory(interaction: discord.Interaction):
-    await interaction.response.send_message(HistoryPaginator().pages[1], view=HistoryPaginator())
+    await interaction.response.send_message(HistoryPaginator().pages, view=HistoryPaginator())
 
 @bot.tree.command(name="support", description="Get troubleshooting steps.")
 async def support(interaction: discord.Interaction):
@@ -104,8 +108,8 @@ async def on_message(message):
         if message.author.id == MY_ID and message.content.startswith("!reply "):
             try:
                 p = message.content.split(" ", 2)
-                u = await bot.fetch_user(int(p[1]))
-                emb = discord.Embed(description=p[2], color=discord.Color.green()).set_author(name="OloBot Support")
+                u = await bot.fetch_user(int(p))
+                emb = discord.Embed(description=p, color=discord.Color.green()).set_author(name="OloBot Support")
                 await u.send(embed=emb)
                 await message.channel.send("✅ Delivered")
             except Exception as e: await message.channel.send(f"❌ Error: {e}")
@@ -121,7 +125,7 @@ async def on_message(message):
     if message.channel.id in olo_channels:
         raw = message.content.strip().lower()
         w = raw.split()
-        if len(w) > 0 and "olo" in w[0] and len(raw) <= 30:
+        if len(w) > 0 and "olo" in w and len(raw) <= 30:
             if message.channel.id in last_olo_users and last_olo_users[message.channel.id] == message.author.id:
                 try: await message.delete()
                 except: pass
