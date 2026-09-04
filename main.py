@@ -21,6 +21,9 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 DATA_FILE = "olo_channels.json"
 last_olo_users = {}
 
+# YOUR PERMANENT DISCORD USER ID
+MY_PERSONAL_USER_ID = 989971920441180160  
+
 def load_channels():
     if os.path.exists(DATA_FILE):
         try:
@@ -49,7 +52,7 @@ class HistoryPaginator(discord.ui.View):
         if self.page > 1:
             self.page -= 1
             button.disabled = (self.page == 1)
-            self.children[1].disabled = False 
+            self.children.disabled = False 
             await interaction.response.edit_message(content=self.pages[self.page], view=self)
 
     @discord.ui.button(label="Next ▶", style=discord.ButtonStyle.primary)
@@ -57,7 +60,7 @@ class HistoryPaginator(discord.ui.View):
         if self.page < 2:
             self.page += 1
             button.disabled = (self.page == 2)
-            self.children[0].disabled = False 
+            self.children.disabled = False 
             await interaction.response.edit_message(content=self.pages[self.page], view=self)
 
 @bot.event
@@ -74,9 +77,9 @@ async def on_ready():
 @bot.tree.command(name="olohistory", description="Learn about the epic lore and history of Olo.")
 async def olohistory(interaction: discord.Interaction):
     view = HistoryPaginator()
-    await interaction.response.send_message(view.pages[1], view=view)
+    await interaction.response.send_message(view.pages, view=view)
 
-# NEW COMMAND: SUPPORT
+# SUPPORT COMMAND
 @bot.tree.command(name="support", description="Get troubleshooting steps and support server access.")
 async def support(interaction: discord.Interaction):
     support_text = (
@@ -86,8 +89,9 @@ async def support(interaction: discord.Interaction):
         "2️⃣ Verify the bot has a role with **Manage Messages** and **Add Reactions** permissions.\n"
         "3️⃣ Ensure you ran `/setchannel` inside your designated olo channel.\n"
         "4️⃣ Make sure your custom emoji is named exactly `olo` (lowercase).\n\n"
+        "💬 **Need custom help?** Feel free to **DM the bot** directly to chat with our staff!\n\n"
         " For further help and support, join the OloBot Support Discord server:\n"
-        "👉 https://discord.gg/X2VTPtVa9b"
+        "👉 https://discord.gg"
     )
     await interaction.response.send_message(support_text)
 
@@ -123,14 +127,48 @@ async def channel_error(interaction: discord.Interaction, error: app_commands.Ap
     if isinstance(error, app_commands.MissingPermissions):
         await interaction.response.send_message("❌ You need 'Manage Channels' permissions to use this command!", ephemeral=True)
 
-# MESSAGE MONITORING LOGIC
+# DM NETWORKING SYSTEM
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
         return
 
+    # Handle incoming and outgoing DMs
+    if isinstance(message.channel, discord.DMChannel):
+        if message.author.id == MY_PERSONAL_USER_ID and message.content.startswith("!reply "):
+            try:
+                parts = message.content.split(" ", 2)
+                target_user_id = int(parts[1])
+                reply_content = parts[2]
+                
+                target_user = await bot.fetch_user(target_user_id)
+                
+                reply_embed = discord.Embed(description=reply_content, color=discord.Color.green())
+                reply_embed.set_author(name="OloBot Support Team", icon_url=bot.user.display_avatar.url)
+                
+                await target_user.send(embed=reply_embed)
+                await message.channel.send(f"✅ Reply delivered to {target_user.name} ({target_user_id})")
+            except Exception as e:
+                await message.channel.send(f"❌ Error sending reply: {e}. Format: `!reply [ID] [message]`")
+            return
+
+        # Forward user DMs to your inbox
+        try:
+            my_account = await bot.fetch_user(MY_PERSONAL_USER_ID)
+            embed = discord.Embed(
+                title="📬 New Support DM Received",
+                description=message.content,
+                color=discord.Color.blue()
+            )
+            embed.set_author(name=f"{message.author} (ID: {message.author.id})", icon_url=message.author.display_avatar.url)
+            embed.set_footer(text=f"To reply, type: !reply {message.author.id} [your message text]")
+            await my_account.send(embed=embed)
+        except Exception:
+            pass
+        return
+
+    # General Olo Channel Rules
     olo_channels = load_channels()
-    
     if message.channel.id in olo_channels:
         words = message.content.strip().lower().split()
 
@@ -138,28 +176,21 @@ async def on_message(message):
             channel_id = message.channel.id
             
             if channel_id in last_olo_users and last_olo_users[channel_id] == message.author.id:
-                try:
-                    await message.delete()
-                except (discord.Forbidden, discord.NotFound):
-                    pass
+                try: await message.delete()
+                except (discord.Forbidden, discord.NotFound): pass
                 return
 
             last_olo_users[channel_id] = message.author.id
 
             reaction = "✅"
             custom_emoji = discord.utils.get(message.guild.emojis, name="olo")
-            if custom_emoji:
-                reaction = custom_emoji
+            if custom_emoji: reaction = custom_emoji
 
-            try:
-                await message.add_reaction(reaction)
-            except discord.DiscordException:
-                pass
+            try: await message.add_reaction(reaction)
+            except discord.DiscordException: pass
         else:
-            try:
-                await message.delete()
-            except (discord.Forbidden, discord.NotFound):
-                pass
+            try: await message.delete()
+            except (discord.Forbidden, discord.NotFound): pass
 
     await bot.process_commands(message)
 
