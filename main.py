@@ -31,6 +31,7 @@ class HistoryPaginator(discord.ui.View):
         }
 
     async def update_page(self, interaction: discord.Interaction):
+        # Correctly grab the individual buttons out of the list to change them
         self.children[0].disabled = (self.page == 1)
         self.children[1].disabled = (self.page == 2)
         await interaction.response.edit_message(content=self.pages[self.page], view=self)
@@ -56,6 +57,7 @@ async def on_ready():
 
 @bot.tree.command(name="olohistory", description="Learn about the epic lore and history of Olo.")
 async def olohistory(interaction: discord.Interaction):
+    # Fixed to display page 1 correctly on startup
     await interaction.response.send_message(HistoryPaginator().pages[1], view=HistoryPaginator())
 
 @bot.tree.command(name="support", description="Get troubleshooting steps.")
@@ -69,26 +71,31 @@ async def support(interaction: discord.Interaction):
 @bot.tree.command(name="setchannel", description="Lock down an olo room.")
 @is_staff()
 async def setchannel(interaction: discord.Interaction, channel: discord.TextChannel):
+    await interaction.response.defer(ephemeral=True)
     olo_channels.add(channel.id)
     topic = channel.topic if channel.topic else ""
     if TAG not in topic:
         try: await channel.edit(topic=f"{topic} {TAG}".strip())
         except discord.Forbidden: pass
-    await interaction.response.send_message(f"🔒 {channel.mention} activated!", ephemeral=True)
+    await interaction.followup.send(f"🔒 {channel.mention} activated!")
 
 @bot.tree.command(name="removechannel", description="Unlock a channel.")
 @is_staff()
 async def removechannel(interaction: discord.Interaction, channel: discord.TextChannel):
+    await interaction.response.defer(ephemeral=True)
     olo_channels.discard(channel.id)
     if channel.topic and TAG in channel.topic:
         try: await channel.edit(topic=channel.topic.replace(TAG, "").strip())
         except discord.Forbidden: pass
-    await interaction.response.send_message(f"🔓 {channel.mention} deactivated.", ephemeral=True)
+    await interaction.followup.send(f"🔓 {channel.mention} deactivated.")
 
 @setchannel.error
 @removechannel.error
 async def perm_err(interaction: discord.Interaction, error: app_commands.AppCommandError):
-    await interaction.response.send_message("❌ Missing permissions or 'Trial Mod' role!", ephemeral=True)
+    if interaction.response.is_done():
+        await interaction.followup.send("❌ Missing permissions or 'Trial Mod' role!", ephemeral=True)
+    else:
+        await interaction.response.send_message("❌ Missing permissions or 'Trial Mod' role!", ephemeral=True)
 
 @bot.event
 async def on_message(message):
