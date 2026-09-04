@@ -52,7 +52,7 @@ class HistoryPaginator(discord.ui.View):
         if self.page > 1:
             self.page -= 1
             button.disabled = (self.page == 1)
-            self.children[1].disabled = False # Enable Next button
+            self.children[1].disabled = False 
             await interaction.response.edit_message(content=self.pages[self.page], view=self)
 
     @discord.ui.button(label="Next ▶", style=discord.ButtonStyle.primary)
@@ -60,7 +60,7 @@ class HistoryPaginator(discord.ui.View):
         if self.page < 2:
             self.page += 1
             button.disabled = (self.page == 2)
-            self.children[0].disabled = False # Enable Back button
+            self.children[0].disabled = False 
             await interaction.response.edit_message(content=self.pages[self.page], view=self)
 
 @bot.event
@@ -77,7 +77,6 @@ async def on_ready():
 @bot.tree.command(name="olohistory", description="Learn about the epic lore and history of Olo.")
 async def olohistory(interaction: discord.Interaction):
     view = HistoryPaginator()
-    # FIXED LINE: Send only the text for Page 1 instead of the raw dictionary layout
     await interaction.response.send_message(view.pages[1], view=view)
 
 # SUPPORT COMMAND
@@ -92,7 +91,7 @@ async def support(interaction: discord.Interaction):
         "4️⃣ Make sure your custom emoji is named exactly `olo` (lowercase).\n\n"
         "💬 **Need custom help?** Feel free to **DM the bot** directly to chat with our staff!\n\n"
         " For further help and support, join the OloBot Support Discord server:\n"
-        "👉 https://discord.gg/X2VTPtVa9b"
+        "👉 https://discord.gg"
     )
     await interaction.response.send_message(support_text)
 
@@ -128,7 +127,7 @@ async def channel_error(interaction: discord.Interaction, error: app_commands.Ap
     if isinstance(error, app_commands.MissingPermissions):
         await interaction.response.send_message("❌ You need 'Manage Channels' permissions to use this command!", ephemeral=True)
 
-# DM NETWORKING SYSTEM
+# DM NETWORKING AND CHANNEL FILTER LOGIC
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
@@ -143,7 +142,6 @@ async def on_message(message):
                 reply_content = parts[2]
                 
                 target_user = await bot.fetch_user(target_user_id)
-                
                 reply_embed = discord.Embed(description=reply_content, color=discord.Color.green())
                 reply_embed.set_author(name="OloBot Support Team", icon_url=bot.user.display_avatar.url)
                 
@@ -153,7 +151,6 @@ async def on_message(message):
                 await message.channel.send(f"❌ Error sending reply: {e}. Format: `!reply [ID] [message]`")
             return
 
-        # Forward user DMs to your inbox
         try:
             my_account = await bot.fetch_user(MY_PERSONAL_USER_ID)
             embed = discord.Embed(
@@ -171,9 +168,11 @@ async def on_message(message):
     # General Olo Channel Rules
     olo_channels = load_channels()
     if message.channel.id in olo_channels:
-        words = message.content.strip().lower().split()
+        raw_content = message.content.strip().lower()
+        words = raw_content.split()
 
-        if len(words) > 0 and words[0] == "olo":
+        # FIXED Logic: First word must INCLUDE "olo", and the whole message must be under 30 characters
+        if len(words) > 0 and "olo" in words[0] and len(raw_content) <= 30:
             channel_id = message.channel.id
             
             if channel_id in last_olo_users and last_olo_users[channel_id] == message.author.id:
