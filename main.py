@@ -91,7 +91,7 @@ async def support(interaction: discord.Interaction):
         "4️⃣ Make sure your custom emoji is named exactly `olo` (lowercase).\n\n"
         "💬 **Need custom help?** Feel free to **DM the bot** directly to chat with our staff!\n\n"
         " For further help and support, join the OloBot Support Discord server:\n"
-        "👉 https://discord.gg"
+        "👉 https://discord.gg/X2VTPtVa9b"
     )
     await interaction.response.send_message(support_text)
 
