@@ -31,7 +31,7 @@ class HistoryPaginator(discord.ui.View):
         }
 
     async def update_page(self, interaction: discord.Interaction):
-        # Correctly grab the individual buttons out of the list to change them
+        # Safely changes button states using explicit list mapping
         self.children[0].disabled = (self.page == 1)
         self.children[1].disabled = (self.page == 2)
         await interaction.response.edit_message(content=self.pages[self.page], view=self)
@@ -57,7 +57,6 @@ async def on_ready():
 
 @bot.tree.command(name="olohistory", description="Learn about the epic lore and history of Olo.")
 async def olohistory(interaction: discord.Interaction):
-    # Fixed to display page 1 correctly on startup
     await interaction.response.send_message(HistoryPaginator().pages[1], view=HistoryPaginator())
 
 @bot.tree.command(name="support", description="Get troubleshooting steps.")
