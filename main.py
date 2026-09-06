@@ -126,8 +126,8 @@ async def on_message(message):
         raw = message.content.strip().lower()
         w = raw.split()
         
-        # TARGET CHANGE: Looks for "olo" inside the actual string text of the first word
-        if len(w) > 0 and "olo" in w[0] and len(raw) <= 30:
+        # TARGET CHANGE: First word must include "olo", total text must be 100 characters or less
+        if len(w) > 0 and "olo" in w[0] and len(raw) <= 100:
             if message.channel.id in last_olo_users and last_olo_users[message.channel.id] == message.author.id:
                 try: await message.delete()
                 except: pass
